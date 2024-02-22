@@ -1,4 +1,5 @@
 ﻿using ETicaretAPI.Application.Abstractions.Storage.Local;
+using ETicaretAPI.Infrastructure.Operations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using System;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace ETicaretAPI.Infrastructure.Services.Storage.Local
 {
-    internal class LocalStorage : ILocalStorage
+    public class LocalStorage : ILocalStorage
     {
         private readonly IWebHostEnvironment _webHostEnvironment;
 
@@ -46,6 +47,21 @@ namespace ETicaretAPI.Infrastructure.Services.Storage.Local
 
 
         }
+        async Task<string> FileRenameAsync(string path, string fileName)
+        {
+
+
+            string newFileName = await Task.Run<string>(() =>
+            {
+                string extention = Path.GetExtension(fileName);
+                string oldName = Path.GetFileNameWithoutExtension(fileName);
+                string today = DateTime.Now.ToString("dd_MM_yyyy_HH_mm_ss_fff");
+                return $"{NameOperation.NameEditor(oldName)}-{today}{extention}";
+            });
+
+
+            return newFileName;
+        }
 
         public async Task<List<(string fileName, string path)>> UploadAsync(string path, IFormFileCollection files)
         {
@@ -58,8 +74,9 @@ namespace ETicaretAPI.Infrastructure.Services.Storage.Local
             List<(string fileName, string path)> datas = new();
             foreach (IFormFile file in files)
             {
-                await CopyFileAsync($"{uploadPath}\\{file.Name}", file);
-                datas.Add((file.Name, $"{path}\\{file.Name}"));
+                string newFileName =await FileRenameAsync(path, file.Name);
+                await CopyFileAsync($"{uploadPath}\\{newFileName}", file);
+                datas.Add((newFileName, $"{path}\\{newFileName}"));
             }
             
             return datas;
